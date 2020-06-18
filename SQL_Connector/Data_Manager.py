@@ -32,121 +32,152 @@ class data_manager():
             self.cursor = self.connection.cursor()
 
             if self.connection.is_connected():
-                print('Connected to '+database+' database')
+                print("Connected to "+database+" database")
 
         except Error as e:
             print(e)
 
     '''---------------------------------------------Execute SQL code-------------------------------------------------'''
-    def AddUpdateRecord(self, command, value = None):
+    def AddUpdateRecord(self, command, value = None,commit=True):
+        print(command,value)
+        print(type(command), type(value))
         self.cursor.execute(command,value)
-        self.connection.commit()
+        if commit:
+            self.connection.commit()
 
-    '''------------------------------------------------Route Table---------------------------------------------------'''
-    def AddRoute(self,route):
-        sql_code = "SELECT * FROM routes WHERE route = %s"
-        self.cursor.execute(sql_code,(route,))
-        if self.cursor.fetchone():
-            print(route + ' Already exist')
+        '''--------------------------------------Query/Delete Entry Table--------------------------------------------'''
+
+    def SQLQueryDeleteEntry(self,sql_table, entry, data,command = False,col = None):
+        # 0 is Query and 1 = Delete
+        values = "("
+        if command:
+            sql_code = "DELETE"
         else:
-            sql_code = "INSERT INTO routes (route) VALUES (%s)"
-            self.AddUpdateRecord(sql_code, value = (route,))
+            if not col:
+                sql_code = "SELECT *"
+            else:
+                sql_code = "SELECT " + col
+        sql_code += " FROM " + sql_table + " WHERE "
 
-    def QueryRoute(self,route):
-        sql_code = "SELECT * FROM routes WHERE route = %s"
-        self.cursor.execute(sql_code, (route,))
-        val = self.cursor.fetchone()
+        for col_name in entry:
+            if sql_code[-1] != " ":
+                sql_code += " AND "
 
-        if val:
-            return val
+            sql_code += col_name.lower() + " = (%s)"
+            if type(data[col_name]) is str:
+                values += data[col_name]
+            else:
+                values += str(data[col_name])
+            values += ","
+        values += ")"
+        values = eval(values)
+
+        if command:
+            commit = True
         else:
-            return None
+            commit = False
+        print(sql_code)
+        print(values)
+        self.AddUpdateRecord(sql_code, value=values,commit=commit)
+        return None
 
-    '''-----------------------------------------------Weather Table--------------------------------------------------'''
-    def AddWeatherLog(self,date,battery,temp,humid,wind,wind_dir,solar):
-        sql_code = "SELECT * FROM weather WHERE date = %s"
-        self.cursor.execute(sql_code, (date,))
-        if self.cursor.fetchone():
-            print('data already exists for ' + str(date))
+    def SQLDeleteEntry2(self, sql_table, entry, base_table, base_entry, not_in=True):
+        sql_code = "DELETE FROM " + sql_table + " WHERE ("
+        for col_name in entry:
+            if sql_code[-1] != "(":
+                sql_code += ", "
+            sql_code += col_name
+
+        if not_in:
+            sql_code += ") NOT IN (SELECT "
         else:
-            sql_code = "INSERT INTO weather (date,battery_volt_avg,temp_avg,rela_humid_avg,wind_speed_daily_avg,wind_direct_avg,solare_rad_avg) VALUES (%s,%s,%s,%s,%s,%s,%s)"
-            self.AddUpdateRecord(sql_code, value=(date, battery, temp, humid, wind, wind_dir, solar))
+            sql_code += ") IN (SELECT "
 
-    def QueryWeather(self,date):
-        sql_code = "SELECT * FROM weather WHERE date = %s"
-        self.cursor.execute(sql_code, (date,))
-        val = self.cursor.fetchone()
+        for col_name in base_entry:
+            if sql_code[-1] != " ":
+                sql_code += ", "
+            sql_code += col_name
+        sql_code += " FROM " + base_table + ")"
+        self.AddUpdateRecord(sql_code)
 
-        if val:
-            return val
-        else:
-            return None
+        return None
 
-    '''------------------------------------------------Climbing Table------------------------------------------------'''
-    def AddClimbLog(self, date,route,weather,attempted,succeeded,success_pct):
-        sql_code = "SELECT * FROM climbing_stat_log WHERE date = %s AND route = %s"
-        self.cursor.execute(sql_code, (date,route))
+    '''-----------------------------------------Insert Entry Table---------------------------------------------------'''
+    def SQLInsertEntry(self, col_list, sql_table, data):
+        sql_command = "INSERT INTO " + sql_table + " ("
+        sql_command_2 = "VALUES ("
+        values = "("
 
-        if self.cursor.fetchone():
-            sql_code = "SELECT * FROM routes WHERE id = %s"
-            self.cursor.execute(sql_code, (route,))
-            val = self.cursor.fetchone()
-            if not self.continue_prev_command[0]:
-                print('Log already exists: ' + str(date)+ ', ' + val[1])
-
-            # Ask for command
-            answer = None
-            while not answer and not self.continue_prev_command[0]:
-                answer = input("\t Would you like to Replace, Update, or Nothing to the record (R/U/N): ")
-                if answer.upper() != 'R' and answer.upper() != 'U' and answer.upper() != 'N':
-                    answer = None
+        for col_name in col_list:
+            if data[col_name] != None:
+                if sql_command[-1] != "(":
+                    sql_command += ", "
+                    sql_command_2 += ", "
+                sql_command += col_name
+                sql_command_2 += "%s"
+                if type(data[col_name]) is str:
+                    values += '"' + data[col_name] + '"'
                 else:
-                    self.continue_prev_command[1] = answer
+                    values += str(data[col_name])
+                values += ","
 
-            while not self.continue_prev_command[0]:
-                self.continue_prev_command[0] = input("\t Would you like to do same for the rest (y/n): ")
-                if self.continue_prev_command[0].lower() == 'y':
-                    self.continue_prev_command[0] = True
+        if "," in sql_command:
+            sql_command = sql_command + ") " + sql_command_2 + ")"
+            values += ")"
+            values = eval(values)
+            self.AddUpdateRecord(sql_command, value=values)
+
+        return None
+
+    '''------------------------------------------Update Entry Table--------------------------------------------------'''
+
+    def SQLUpdateEntry(self, col_list, sql_table, primary_key, data):
+        sql_primary_key = " WHERE "
+        primary_values = ""
+
+        for pk in primary_key:
+
+            if len(sql_primary_key) > 7:
+                sql_primary_key += " AND "
+
+            sql_primary_key += pk + " = %s"
+            if type(data[pk]) is str:
+                primary_values += ',"' + data[pk] + '"'
+            else:
+                primary_values += "," + str(data[pk])
+        primary_values += ")"
+
+        for col_name in col_list:
+            if col_name not in primary_key:
+                sql_code = "UPDATE " + sql_table + " SET " + col_name + " = %s"
+
+                if type(data[col_name]) is str:
+                    values = '("' + data[col_name] + '"' + primary_values
                 else:
-                    self.continue_prev_command[0] = False
-                    if answer.lower != 'n':
-                        break
+                    values = "(" + str(data[col_name]) + primary_values
 
-            if self.continue_prev_command[1].upper() != 'N':
-                self.UpdateClimblog(date,route,weather=weather,attempted=attempted,succeeded=succeeded,command=self.continue_prev_command[1].upper())
-        else:
-            sql_code = "INSERT INTO climbing_stat_log (date, route, weather, attempted, succeeded, success_pct) VALUES (%s, %s, %s, %s, %s, %s)"
-            self.AddUpdateRecord(sql_code, value=(date, route, weather, attempted, succeeded, success_pct))
+                sql_code += sql_primary_key
+                values = eval(values)
+                self.AddUpdateRecord(sql_code, value=values)
+        return None
 
-    def UpdateClimblog(self,date,route,weather=None,attempted=None,succeeded=None,command = 'R'):
-        sql_code = "SELECT * FROM climbing_stat_log WHERE date = %s AND route = %s"
-        self.cursor.execute(sql_code, (date,route))
-        val = self.cursor.fetchone()
+    '''------------------------------------------Repeat command------------------------------------------------------'''
+    def repeatcommand(self):
+        # Ask for command
+        answer = None
+        while not answer and not self.continue_prev_command[0]:
+            answer = input("\t Would you like to Update, or Nothing to the record (R/U/N): ")
+            if answer.upper() != "R" and answer.upper() != "U" and answer.upper() != "N":
+                answer = None
+            else:
+                self.continue_prev_command[1] = answer
 
-        if weather:
-            sql_code = "UPDATE climbing_stat_log SET weather = %s WHERE date = %s AND route = %s"
-            self.AddUpdateRecord(sql_code, value = (weather,date,route))
-
-        if attempted:
-            if command == 'U':
-                attempted += val[4]
-            sql_code = "UPDATE climbing_stat_log SET attempted = %s WHERE date = %s AND route = %s"
-            self.AddUpdateRecord(sql_code, value=(attempted, date, route))
-
-        if succeeded:
-            if command == 'U':
-                succeeded += val[5]
-            sql_code = "UPDATE climbing_stat_log SET succeeded = %s WHERE date = %s AND route = %s"
-            self.AddUpdateRecord(sql_code, value=(succeeded, date, route))
-
-        if attempted or succeeded:
-            if not attempted:
-                attempted = val[4]
-
-            if not succeeded:
-                succeeded = val[5]
-
-            sql_code = "UPDATE climbing_stat_log SET success_pct = %s WHERE date = %s AND route = %s"
-            self.AddUpdateRecord(sql_code, value=(succeeded/attempted, date, route))
-
-        self.connection.commit()
+        while not self.continue_prev_command[0]:
+            self.continue_prev_command[0] = input("\t Would you like to do same for the rest (y/n): ")
+            if self.continue_prev_command[0].lower() == "y":
+                self.continue_prev_command[0] = True
+            else:
+                self.continue_prev_command[0] = False
+                if answer.lower != "n":
+                    break
+            return
