@@ -9,6 +9,7 @@ from SQL_Connector.Data_Manager import data_manager
 import SQL_Connector.census_us_national as census_us
 import SQL_Connector.census_us_county as census_county
 import SQL_Connector.HILFD_hospital as hospital_sql
+import SQL_Connector.us_covid as us_covid
 
 '''-------------------------------------------------User input-------------------------------------------------------'''
 #input_file = 'C:\\Users\\Albert Sze\\Documents\\Github\\albertlsze\\Data_sets\\mount-rainier-weather-and-climbing-data'
@@ -30,14 +31,17 @@ for i in login_info:
 database_manager = data_manager(host,port = port,username=username,password=password)
 
 '''-----------------------------------------Add to National Census---------------------------------------------------'''
+'''
 # National Census data
 import_data = os.path.join(data_folder, 'US_Census_Data\\nst-est2019-alldata.xlsx')
 import_data = excel_rw.Open_Excel(import_data)
 import_data = import_data['nst-est2019-alldata']
 import_data = import_data.where(pd.notnull(import_data), None)
 
-#census_us.AddState(database_manager,import_data)
+census_us.AddState(database_manager,import_data)
+'''
 '''------------------------------------------Add to County Census----------------------------------------------------'''
+'''
 # County Census data
 import_data = os.path.join(data_folder, 'US_Census_Data\\co-est2019-alldata.xlsx')
 import_data = excel_rw.Open_Excel(import_data)
@@ -50,18 +54,40 @@ for index,value in enumerate(import_data['COUNTY_ID'].values):
     after_dec = len(value[dec_loc+1:])
     if after_dec > 3:
         import_data['COUNTY_ID'][index] = value[:dec_loc + 4]
-#census_county.AddCounty(database_manager, import_data)
-
+census_county.AddCounty(database_manager, import_data)
+'''
 '''------------------------------------------Add to Hospital Data----------------------------------------------------'''
+'''
 import_data = os.path.join(data_folder, 'HIFLD\\Hospitals.csv')
 import_data = pd.read_csv(import_data)
 import_data = import_data.where(pd.notnull(import_data), None)
+import_data = import_data.replace('NOT AVAILABLE','')
+import_data = import_data[(import_data['COUNTRY']=='USA') | (import_data['COUNTRY']=='PRI')]
 
-database_manager.cursor.execute('SELECT * FROM us_hospital WHERE id = (%s)',(5793230,))
+hospital_sql.AddHospital(database_manager, import_data)
+'''
 
-#hospital_sql.AddHospital(database_manager, import_data)
-#hospital_sql.check(database_manager,hospital)
+'''------------------------------------------Add to us_covid19_daily Data----------------------------------------------------'''
+#set timer up
+import_data = os.path.join(data_folder, 'us_covid19_daily.csv')
+import_data = pd.read_csv(import_data)
+import_data = import_data.where(pd.notnull(import_data), None)
+
+dates = []
+for year in import_data['date'].values:
+    day = year%100
+    year = year //100
+    month = year%100
+    year = year //100
+    dates.append(str(month) + '/' + str(day) + '/' + str(year))
+import_data['date'] = dates
+import_data['date'] = pd.to_datetime(import_data['date'], format="%m/%d/%Y").dt.date
 
 
+us_covid.AddLog(database_manager, import_data)
+
+
+print('completed')
+database_manager.cursor.close()
 #database_manager = login()
 

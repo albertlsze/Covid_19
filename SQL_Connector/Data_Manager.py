@@ -29,7 +29,9 @@ class data_manager():
                                                       database = database
                                                       )
 
-            self.cursor = self.connection.cursor()
+            self.cursor = self.connection.cursor(buffered=True)
+            #self.connection.cursor(bu)
+            #self.buffer = self.cursor(buffered=True)
 
             if self.connection.is_connected():
                 print("Connected to "+database+" database")
@@ -64,20 +66,25 @@ class data_manager():
                 sql_code += " AND "
 
             sql_code += col_name.lower() + " = (%s)"
+            print(type(data[col_name]))
             if type(data[col_name]) is str:
                 values += data[col_name]
+            elif type(data[col_name]) is datetime or datetime.date:
+                date = (str(data[col_name].year) + ',' + str(data[col_name].month) + ',' + str(data[col_name].day))
+                values += '"datetime.date(' + date + ')"'
             else:
                 values += str(data[col_name])
             values += ","
         values += ")"
+
+        print(values)
         values = eval(values)
 
         if command:
             commit = True
         else:
             commit = False
-        print(sql_code)
-        print(values)
+
         self.AddUpdateRecord(sql_code, value=values,commit=commit)
         return None
 

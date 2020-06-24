@@ -5,13 +5,20 @@ from getpass import getpass
 from datetime import datetime
 from mysql.connector import Error
 
-
 def check(connection,data,sql_table,entry,col_name,search):
-    temp = {entry: '"' + data[col_name] + '"'}
-    connection.SQLQueryDeleteEntry(sql_table, [entry],temp, command=0, col=search)
+    temp = {}
+    for i in range(0,len(entry)):
+        if type(data[col_name[i]]) is str:
+            temp[entry[i]] = '"' + data[col_name[i]][0]+data[col_name[i]][1:].lower() + '"'
+        else:
+            temp[entry[i]] = data[col_name[i]]
+    connection.SQLQueryDeleteEntry(sql_table, entry,temp, command=0, col=search)
     val = connection.cursor.fetchone()
     if val:
-        data[col_name] = val[0]
+        data[col_name[i]] = val[0]
+    else:
+        print('Missing Country: ',data[col_name[i]])
+        data[col_name[i]] = None
 
 def AddHospital(connection, data):
     primary_key = set(['ID'])
@@ -19,14 +26,15 @@ def AddHospital(connection, data):
     sql_table = 'us_hospital'
 
     for index,row in data.iterrows():
-        check(connection, row, 'census_us_national', 'ABBREVIATION', 'STATE', 'state')
-        check(connection, row, 'census_us_county', 'CTYNAME', 'COUNTY', 'county_id')
+        check(connection, row, 'census_us_national', ['ABBREVIATION'], ['STATE'], 'state')
+        check(connection, row, 'census_us_county', ['STATE','CTYNAME'], ['STATE','COUNTY'], 'county_id')
 
         connection.SQLQueryDeleteEntry(sql_table,primary_key, row,command = 0)
 
         if connection.cursor.fetchone():
             if not connection.continue_prev_command[0]:
-                print('Log already exists: ' + row['NAME'] + ' in ' + row['STATE'] +', ' + row['CITY'])
+
+                print('Log already exists: ' + row['NAME'] + ' in ' + str(row['STATE']) +', ' + row['CITY'])
 
             connection.repeatcommand()
 
