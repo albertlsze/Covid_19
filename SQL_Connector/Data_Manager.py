@@ -66,18 +66,9 @@ class data_manager():
                 sql_code += " AND "
 
             sql_code += col_name.lower() + " = (%s)"
-            print(type(data[col_name]))
-            if type(data[col_name]) is str:
-                values += data[col_name]
-            elif type(data[col_name]) is datetime or datetime.date:
-                date = (str(data[col_name].year) + ',' + str(data[col_name].month) + ',' + str(data[col_name].day))
-                values += '"datetime.date(' + date + ')"'
-            else:
-                values += str(data[col_name])
-            values += ","
+            values += "data['" + col_name + "'],"
         values += ")"
 
-        print(values)
         values = eval(values)
 
         if command:
@@ -122,11 +113,14 @@ class data_manager():
                     sql_command_2 += ", "
                 sql_command += col_name
                 sql_command_2 += "%s"
-                if type(data[col_name]) is str:
+
+                values += "data['" + col_name + "'],"
+                '''if type(data[col_name]) is str:
                     values += '"' + data[col_name] + '"'
                 else:
                     values += str(data[col_name])
                 values += ","
+                '''
 
         if "," in sql_command:
             sql_command = sql_command + ") " + sql_command_2 + ")"
@@ -157,11 +151,13 @@ class data_manager():
         for col_name in col_list:
             if col_name not in primary_key:
                 sql_code = "UPDATE " + sql_table + " SET " + col_name + " = %s"
+                values = "(data['" + col_name + "']" + primary_values
 
-                if type(data[col_name]) is str:
+                '''if type(data[col_name]) is str:
                     values = '("' + data[col_name] + '"' + primary_values
                 else:
                     values = "(" + str(data[col_name]) + primary_values
+                '''
 
                 sql_code += sql_primary_key
                 values = eval(values)
@@ -169,7 +165,7 @@ class data_manager():
         return None
 
     '''------------------------------------------Repeat command------------------------------------------------------'''
-    def repeatcommand(self):
+    def repeatcommand(self, col_list, sql_table, primary_key, data):
         # Ask for command
         answer = None
         while not answer and not self.continue_prev_command[0]:
@@ -180,11 +176,50 @@ class data_manager():
                 self.continue_prev_command[1] = answer
 
         while not self.continue_prev_command[0]:
-            self.continue_prev_command[0] = input("\t Would you like to do same for the rest (y/n): ")
-            if self.continue_prev_command[0].lower() == "y":
+            answer = input("\t Would you like to do same for the rest (y/n): ")
+            if answer.lower() == "y":
                 self.continue_prev_command[0] = True
             else:
                 self.continue_prev_command[0] = False
-                if answer.lower != "n":
+                if answer.lower() == "n":
                     break
-            return
+
+        if self.continue_prev_command[1].upper() == 'U':
+            self.SQLUpdateEntry(col_list, sql_table, primary_key, data)
+        elif self.continue_prev_command[1].upper() == 'R':
+            self.SQLQueryDeleteEntry(sql_table, primary_key, data, command=1)
+            self.SQLInsertEntry(col_list, sql_table, data)
+
+
+    '''-------------------------------Query and Replace command------------------------------------------------------'''
+    def Query_Replace(self, data, sql_table, entry, col_name, search, cap = None):
+        temp = {}
+        if not cap:
+            cap = [0]*len(entry)
+
+        for i in range(0, len(entry)):
+            if type(data[col_name[i]]) is str:
+                if cap == 1:
+                    str_list = data[col_name[i]].lower()
+                    str_list = str_list.split(' ')
+
+                    county = ''
+                    for word in str_list:
+                        if county:
+                            county += ' '
+                        county += word[0].upper() + word[1:]
+
+                    temp[entry[i]] = county
+                elif cap == 2:
+                    temp[entry[i]] = data[col_name[i]].lower()
+                else:
+                    temp[entry[i]] = data[col_name[i]]
+            else:
+                temp[entry[i]] = data[col_name[i]]
+        self.SQLQueryDeleteEntry(sql_table, entry, temp, command=0, col=search)
+        val = self.cursor.fetchone()
+        if val:
+            data[col_name[i]] = val[0]
+        else:
+            print('Missing ' + col_name[i] + ': ', data[col_name[i]])
+            data[col_name[i]] = None

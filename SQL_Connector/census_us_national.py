@@ -8,11 +8,11 @@ from mysql.connector import Error
 def StateID(state):
     state = str(state)
     if 2 > len(state):
-        state = '"00'+state+'"'
+        state = '00'+state+''
     elif 3 > len(state):
-        state = '"0'+state+'"'
+        state = '0'+state+''
     else:
-        state = '"' + state + '"'
+        state = '' + state + ''
     return state
 
 def AddState(connection, data):
@@ -28,14 +28,15 @@ def AddState(connection, data):
             if not connection.continue_prev_command[0]:
                 print('Log already exists: ' + row['NAME'])
 
-            connection.repeatcommand()
+            connection.repeatcommand(col_list, sql_table, primary_key, row)
+            '''connection.repeatcommand()
 
             if connection.continue_prev_command[1].upper() == 'U':
                 connection.SQLUpdateEntry(col_list, sql_table, primary_key, row)
             elif connection.continue_prev_command[1].upper() == 'R':
                 connection.SQLQueryDeleteEntry(sql_table, primary_key, state_id,command = 1)
                 connection.SQLInsertEntry(col_list, sql_table, row)
-
+            '''
         else:
             connection.SQLInsertEntry(col_list, sql_table, row)
 

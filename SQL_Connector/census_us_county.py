@@ -11,12 +11,14 @@ def AddCounty(connection, data):
     sql_table = 'census_us_county'
 
     for index,row in data.iterrows():
-        connection.SQLQueryDeleteEntry(sql_table,primary_key, row,command = 0)
+        connection.SQLQueryDeleteEntry(sql_table, primary_key, row, command=0)
 
         if connection.cursor.fetchone():
             if not connection.continue_prev_command[0]:
                 print('Log already exists: ' + row['STNAME'] + ', ' + row['CTYNAME'])
 
+            connection.repeatcommand(col_list, sql_table, primary_key, row)
+            '''
             connection.repeatcommand()
 
             if connection.continue_prev_command[1].upper() == 'U':
@@ -24,7 +26,7 @@ def AddCounty(connection, data):
             elif connection.continue_prev_command[1].upper() == 'R':
                 connection.SQLQueryDeleteEntry(sql_table, primary_key, row,command = 1)
                 connection.SQLInsertEntry(col_list, sql_table, row)
-
+            '''
         else:
             connection.SQLInsertEntry(col_list, sql_table, row)
 

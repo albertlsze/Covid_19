@@ -17,6 +17,8 @@ def AddLog(connection, data):
             if not connection.continue_prev_command[0]:
                 print('Log already exists: ', row['date'])
 
+            connection.repeatcommand(col_list, sql_table, primary_key, row)
+            '''
             connection.repeatcommand()
 
             if connection.continue_prev_command[1].upper() == 'U':
@@ -24,7 +26,7 @@ def AddLog(connection, data):
             elif connection.continue_prev_command[1].upper() == 'R':
                 connection.SQLQueryDeleteEntry(sql_table, primary_key, row,command = 1)
                 connection.SQLInsertEntry(col_list, sql_table, row)
-
+            '''
         else:
             connection.SQLInsertEntry(col_list, sql_table, row)
 
