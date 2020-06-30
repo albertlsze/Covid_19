@@ -29,14 +29,7 @@ def AddState(connection, data):
                 print('Log already exists: ' + row['NAME'])
 
             connection.repeatcommand(col_list, sql_table, primary_key, row)
-            '''connection.repeatcommand()
 
-            if connection.continue_prev_command[1].upper() == 'U':
-                connection.SQLUpdateEntry(col_list, sql_table, primary_key, row)
-            elif connection.continue_prev_command[1].upper() == 'R':
-                connection.SQLQueryDeleteEntry(sql_table, primary_key, state_id,command = 1)
-                connection.SQLInsertEntry(col_list, sql_table, row)
-            '''
         else:
             connection.SQLInsertEntry(col_list, sql_table, row)
 

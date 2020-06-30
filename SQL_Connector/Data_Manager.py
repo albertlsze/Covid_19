@@ -41,8 +41,6 @@ class data_manager():
 
     '''---------------------------------------------Execute SQL code-------------------------------------------------'''
     def AddUpdateRecord(self, command, value = None,commit=True):
-        print(command,value)
-        print(type(command), type(value))
         self.cursor.execute(command,value)
         if commit:
             self.connection.commit()
@@ -115,12 +113,6 @@ class data_manager():
                 sql_command_2 += "%s"
 
                 values += "data['" + col_name + "'],"
-                '''if type(data[col_name]) is str:
-                    values += '"' + data[col_name] + '"'
-                else:
-                    values += str(data[col_name])
-                values += ","
-                '''
 
         if "," in sql_command:
             sql_command = sql_command + ") " + sql_command_2 + ")"
@@ -152,12 +144,6 @@ class data_manager():
             if col_name not in primary_key:
                 sql_code = "UPDATE " + sql_table + " SET " + col_name + " = %s"
                 values = "(data['" + col_name + "']" + primary_values
-
-                '''if type(data[col_name]) is str:
-                    values = '("' + data[col_name] + '"' + primary_values
-                else:
-                    values = "(" + str(data[col_name]) + primary_values
-                '''
 
                 sql_code += sql_primary_key
                 values = eval(values)
