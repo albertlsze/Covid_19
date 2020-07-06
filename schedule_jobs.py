@@ -19,7 +19,7 @@ def schedule_jobs():
 
     '''------------------------------------------Schedules-------------------------------------------------'''
     # update covid database
-    schedule.every().day.at("9:07").do(Update_database.Update_database,data_folder, database_manager, us_covid_update = True, us_state_update = True, us_county_update = True)
+    schedule.every().day.at("12:00").do(Update_database.Update_database,data_folder, database_manager, us_covid_update = True, us_state_update = True, us_county_update = True)
 
 if __name__ == '__main__':
     '''-----------------------------------------------run schedule---------------------------------------------------'''
