@@ -4,15 +4,22 @@ from termcolor import colored
 from getpass import getpass
 from datetime import datetime
 from mysql.connector import Error
+import Update_Database_Entities.Filter_list as filter_list
 
-def AddLog(connection, data):
+def AddLog(connection, data,structure):
     primary_key = set(['date','county'])
-    col_list = data.columns
     sql_table = 'us_county_covid'
+
+    col_list = filter_list.filter_list(structure, data.columns.values)
+    col_list.append('state')
+    data = data.filter(col_list)
 
     for index,row in data.iterrows():
         state = row['state']
         county = row['county']
+        if state == 'Missouri' and county == 'Joplin':
+            print('skip: ',county,' ',state)
+            continue
 
         connection.Query_Replace(row, 'census_us_county', ['STNAME','CTYNAME'], ['state','county'], 'county_id',cap=[0,1])
         row['state'] = None
