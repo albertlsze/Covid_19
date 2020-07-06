@@ -17,17 +17,14 @@ def AddLog(connection, data,structure):
     for index,row in data.iterrows():
         state = row['state']
         county = row['county']
-        if state == 'Missouri' and county == 'Joplin':
-            print('skip: ',county,' ',state)
-            continue
 
         connection.Query_Replace(row, 'census_us_county', ['STNAME','CTYNAME'], ['state','county'], 'county_id',cap=[0,1])
         row['state'] = None
 
         connection.SQLQueryDeleteEntry(sql_table,primary_key, row,command = 0)
         if not row['county']:
-            print(county, state)
-            #continue
+            print('skip: ',county,' ',state)
+            continue
 
         if connection.cursor.fetchone():
             if not connection.continue_prev_command[0]:
